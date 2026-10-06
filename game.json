@@ -4,7 +4,8 @@
   "format": "gunpoint",
   "sourceLang": "en",
   "languages": [
-    "ru"
+    "ru",
+    "ko"
   ],
   "forum": "https://localization-forum.vercel.app/"
 }
