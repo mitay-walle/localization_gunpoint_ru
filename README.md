@@ -1,2 +1,8 @@
-# localization_gunpoint_ru
-Перевод Gunpoint — LocalizationForum
+# Gunpoint — перевод
+
+Перевод ведётся коллективно на форуме: https://localization-forum.vercel.app/#/g/gunpoint
+
+- `source/` — оригинальные файлы игры (en)
+- `ru/` — перевод (ru), только утверждённые строки
+
+Файлы в этом репозитории обновляет форум кнопкой «Опубликовать в GitHub». Правки строк вносите на форуме, иначе они перезапишутся.

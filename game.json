@@ -1,0 +1,10 @@
+{
+  "slug": "gunpoint",
+  "title": "Gunpoint",
+  "format": "gunpoint",
+  "sourceLang": "en",
+  "languages": [
+    "ru"
+  ],
+  "forum": "https://localization-forum.vercel.app/"
+}
