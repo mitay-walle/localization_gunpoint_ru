@@ -1,0 +1,10 @@
+settings.json
+build/
+dist/
+wad_orig/
+fonts_original/
+fonts/_preview/
+__pycache__/
+translation/*.saves.json
+translation/forum/en.csv
+translation/forum/*/
