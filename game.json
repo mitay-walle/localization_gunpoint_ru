@@ -2,10 +2,13 @@
   "slug": "gunpoint",
   "title": "Gunpoint",
   "format": "gunpoint",
+  "format_map": {
+    ".csv": "gunpoint-csv",
+    ".gpc": "gunpoint"
+  },
   "sourceLang": "en",
   "languages": [
-    "ru",
-    "ko"
+    "ru"
   ],
   "forum": "https://localization-forum.vercel.app/"
 }
