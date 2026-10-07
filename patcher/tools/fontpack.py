@@ -98,8 +98,9 @@ def _texture_fields(data):
     raise ValueError('texture header not recognised')
 
 
-def read_phyre_texture(path):
-    data = open(path, 'rb').read()
+def read_phyre_texture(src):
+    """src: path or file bytes."""
+    data = src if isinstance(src, bytes) else open(src, 'rb').read()
     hdr, _, w, h = _texture_fields(data)
     return Image.frombytes('L', (w, h), data[hdr:]).transpose(Image.FLIP_TOP_BOTTOM)
 

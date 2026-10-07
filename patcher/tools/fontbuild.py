@@ -2,13 +2,16 @@
 the translations need.
 
   python tools/fontbuild.py [lang ...]          # default: every translation/<lang>.csv
+  (standalone: GunpointFontBuilder.exe, see fontbuilder.py)
 
 For each of the 12 game fonts: the original glyphs are copied from the original atlas
 unchanged; every character used by the translations that the font lacks (plus basic
 Cyrillic and typographic punctuation) is rendered from a Windows TTF at a pixel size
 calibrated against the original Latin glyphs. Scripts the original face does not cover
 (Hangul, CJK, kana) come from a fallback font. The atlas grows (power of two) when the
-glyphs do not fit. Previews: fonts/_preview/<name>.png.
+glyphs do not fit. Previews: fonts/_preview/<name>.png. Original fonts are read from
+Gunpoint.wad.orig (or Gunpoint.wad before the first install). TTFs are looked up in ttf/
+next to the project / exe first, then in the Windows font folder.
 
 The result is plain BMFont (XML .fnt + 8-bit PNG, top-down) — replace any of these files
 with your own (e.g. from AngelCode BMFont, single page) and build.py packs it into the game.
@@ -22,7 +25,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config
 import fontpack
 import wadtool
-import table
 
 WINFONTS = os.path.join(os.environ.get('WINDIR', r'C:\Windows'), 'Fonts')
 
@@ -57,11 +59,19 @@ MAX_ATLAS = 4096
 _cmaps = {}
 
 
+def ttf_path(name):
+    for d in (os.path.join(config.PROJECT, 'ttf'), WINFONTS):
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def has_glyph(ttf, cp):
     if ttf not in _cmaps:
-        p = os.path.join(WINFONTS, ttf)
-        f = TTCollection(p).fonts[0] if p.lower().endswith('.ttc') else TTFont(p, lazy=True)
-        _cmaps[ttf] = set(f.getBestCmap())
+        p = ttf_path(ttf)
+        f = None if p is None else TTCollection(p).fonts[0] if p.lower().endswith('.ttc') else TTFont(p, lazy=True)
+        _cmaps[ttf] = set(f.getBestCmap()) if f else set()
     return cp in _cmaps[ttf]
 
 
@@ -124,16 +134,18 @@ def pack(glyphs, W, H):
     return pos
 
 
-def build(name, wanted):
-    fnt = fontpack.read_fnt(os.path.join(config.WAD_ORIG, 'Fonts', name + '.fnt'))
+def build(name, wanted, wad, out_dir):
+    fnt = fontpack.read_fnt(wadtool.read(wad, f'Fonts/{name}.fnt'))
     info, common, chars, kern = fnt['info'], fnt['common'], fnt['chars'], fnt['kernings']
     W, H = int(common['scaleW']), int(common['scaleH'])
     base = int(common['base'])
-    atlas = fontpack.read_phyre_texture(os.path.join(config.WAD_ORIG, 'GL', 'Fonts', name + '_0.png.phyre'))
+    atlas = fontpack.read_phyre_texture(wadtool.read(wad, f'GL/Fonts/{name}_0.png.phyre'))
 
     bold = int(info['bold'])
     ttf = TTF[(info['face'], bold, int(info['italic']))]
-    px, dx, dy = calibrate(os.path.join(WINFONTS, ttf), int(info['size']), chars, base, SAME_FACE.get(ttf, True))
+    if ttf_path(ttf) is None:
+        raise SystemExit(f'{name}: font {ttf} not found (put it into ttf/ or {WINFONTS})')
+    px, dx, dy = calibrate(ttf_path(ttf), int(info['size']), chars, base, SAME_FACE.get(ttf, True))
     fonts = {}
 
     def font_for(cp):
@@ -141,7 +153,7 @@ def build(name, wanted):
         if f is None or not has_glyph(f, cp):
             return None, None
         if f not in fonts:
-            fonts[f] = ImageFont.truetype(os.path.join(WINFONTS, f), px)
+            fonts[f] = ImageFont.truetype(ttf_path(f), px)
         return fonts[f], f
 
     bitmaps, meta = {}, {}
@@ -180,13 +192,13 @@ def build(name, wanted):
     out_chars = {cid: {'id': cid, 'x': pos[cid][0], 'y': pos[cid][1], 'width': bitmaps[cid].width,
                        'height': bitmaps[cid].height, 'xoffset': meta[cid][0], 'yoffset': meta[cid][1],
                        'xadvance': meta[cid][2], 'page': 0, 'chnl': 15} for cid in bitmaps}
-    os.makedirs(config.FONTS, exist_ok=True)
-    fontpack.write_fnt(os.path.join(config.FONTS, name + '.fnt'),
+    os.makedirs(out_dir, exist_ok=True)
+    fontpack.write_fnt(os.path.join(out_dir, name + '.fnt'),
                        {'info': info, 'common': common, 'pages': {0: name + '_0.png'},
                         'chars': out_chars, 'kernings': kern})
-    new_atlas.save(os.path.join(config.FONTS, name + '_0.png'))
+    new_atlas.save(os.path.join(out_dir, name + '_0.png'))
     fontpack.preview(name, out_chars, new_atlas, int(common['lineHeight']), kern,
-                     os.path.join(config.FONTS, '_preview', name + '.png'), SAMPLES)
+                     os.path.join(out_dir, '_preview', name + '.png'), SAMPLES)
     print(f'{name:14} {ttf:12} px={px:5.2f} +{added:4} glyphs {W}x{H}'
           + (f' fallback: {", ".join(sorted(used - {ttf}))}' if used - {ttf} else '')
           + (f' MISSING {len(missing)}: {"".join(map(chr, missing[:20]))}' if missing else ''))
@@ -197,24 +209,28 @@ SAMPLES = ['Съешь же ещё этих мягких французских 
            'The quick brown fox jumps over the lazy dog. 0123456789']
 
 
-def main(langs):
-    if not os.path.isdir(os.path.join(config.WAD_ORIG, 'Fonts')):  # original glyphs come from the unpacked wad
-        config.init()
-        wad = config.WAD_ORIG_FILE if os.path.exists(config.WAD_ORIG_FILE) else os.path.join(config.GAME, 'Gunpoint.wad')
-        wadtool.unpack(wad, config.WAD_ORIG)
+def original_wad():
+    wad = config.WAD_ORIG_FILE if os.path.exists(config.WAD_ORIG_FILE) else os.path.join(config.GAME, 'Gunpoint.wad')
+    if wad != config.WAD_ORIG_FILE:
+        print(f'{wad}: no Gunpoint.wad.orig yet, taking the fonts from the current archive')
+    return wad
+
+
+def main(texts, wad, out_dir):
+    """texts: translated strings; renders every non-ASCII character they use."""
     wanted = set(BASE_CHARS)
-    for lang in langs:
-        rows = table.load(lang)
-        sample = [r['translation'] for r in rows if r['translation'].strip()][:2]
-        SAMPLES.extend(s for s in sample if s not in SAMPLES)
-        for r in rows:
-            wanted.update(ord(c) for c in r['translation'] if ord(c) >= 0x80)
-    print(f'{len(wanted)} non-ASCII characters wanted (languages: {", ".join(langs)})')
-    for fn in sorted(os.listdir(os.path.join(config.WAD_ORIG, 'Fonts'))):
-        if fn.endswith('.fnt'):
-            build(fn[:-4], wanted)
+    for t in texts:
+        wanted.update(ord(c) for c in t if ord(c) >= 0x80)
+    SAMPLES.extend(t for t in list(texts)[:2] if t not in SAMPLES)
+    print(f'{len(wanted)} non-ASCII characters wanted')
+    for name in fontpack.wad_names(wad):
+        build(name, wanted, wad, out_dir)
+    print(f'fonts -> {out_dir}')
 
 
 if __name__ == '__main__':
+    import table
+    config.init()
     langs = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(config.TRANSLATION) if f.endswith('.csv'))
-    main(langs)
+    texts = [r['translation'] for lang in langs for r in table.load(lang) if r['translation'].strip()]
+    main(texts, original_wad(), config.FONTS)

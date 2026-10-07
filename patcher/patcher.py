@@ -9,23 +9,14 @@ Everything it installs lies next to it, so a translation or a font is updated by
   GunpointPatcher.exe                         # asks for the game folder once (or sits in it)
   GunpointPatcher.exe --game "D:\Games\Gunpoint" [--saves DIR | --no-saves] [file.csv ...]
   GunpointPatcher.exe --restore               # put the original game files back
+
+New characters in a translation (another language)? Run GunpointFontBuilder.exe (fontbuilder.py)
+in the same folder first: it renders fonts/ for every *.csv here.
 """
 import os, sys, traceback
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tools'))
 import config, install
-
-SKIP_DIRS = {'fonts', '_internal', 'build', 'dist', 'Scripts', 'Scripts.orig', 'Savegames'}
-
-
-def find_tables(base, ref):
-    found = []
-    for root, dirs, files in os.walk(base):
-        depth = os.path.relpath(root, base).count(os.sep) + (root != base)
-        dirs[:] = [] if depth >= 2 else [d for d in dirs if d not in SKIP_DIRS and not d.startswith('.')]
-        found += [os.path.join(root, f) for f in files if f.lower().endswith('.csv')]
-    counted = [(p, install.count(p, ref)) for p in sorted(found)]
-    return [(p, n) for p, n in counted if n]
 
 
 def ask(prompt, default=''):
@@ -69,7 +60,7 @@ def main(args):
     if args:
         tables = [os.path.abspath(config.winpath(a)) for a in args]
     else:
-        found = find_tables(config.PROJECT, ref)
+        found = install.find_tables(config.PROJECT, ref)
         if not found:
             raise SystemExit(f'Рядом с патчером ({config.PROJECT}) нет файла перевода *.csv')
         if len(found) > 1:

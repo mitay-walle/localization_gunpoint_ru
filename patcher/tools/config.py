@@ -82,7 +82,7 @@ def set_saves(path):
     SAVES = path
 
 
-def init(game=None, saves=None, ask=True):
+def init(game=None, saves=None, ask=True, with_saves=True):
     """Resolve the folders: command line > settings.json > the folder of the patcher > dialog.
     saves: None = from settings / default <game>/Savegames, '' = leave saves alone."""
     s = load_settings()
@@ -96,6 +96,9 @@ def init(game=None, saves=None, ask=True):
     if not game:
         raise SystemExit('game folder not set: --game "<path to Gunpoint>"')
     set_game(game)
+    if not with_saves:
+        save_settings(game=GAME)
+        return
     if saves is None:
         saves = s.get('saves') if same_path(s.get('game'), GAME) else None  # saves of another game folder: no
         if saves is None or (saves and not os.path.isdir(saves)):

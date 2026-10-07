@@ -27,6 +27,14 @@ python make_release.py ru
 ```
 → `dist/Gunpoint-ru-patcher.zip`.
 
+## Генератор шрифтов
+`GunpointFontBuilder.exe` (`fontbuilder.py`) — отдельное приложение, рендерит набор шрифтов под перевод.
+Кладётся рядом с патчером и таблицами (`*.csv`), берёт оригинальные шрифты из `Gunpoint.wad.orig`
+(или `Gunpoint.wad` до первой установки) и пишет `fonts/<имя>.fnt` + `_0.png` и превью `fonts/_preview/`.
+Символы берутся из всех найденных таблиц; TTF — из папки `ttf/` рядом с программой, затем из
+`C:\Windows\Fonts`. Командная строка: `GunpointFontBuilder.exe --game "<папка игры>" [файл.csv ...]`.
+Сборка: `python make_release.py fontbuilder` → `dist/GunpointFontBuilder.zip`.
+
 ## Сборка и установка из исходников
 Из папки проекта. Папку с игрой указывает игрок (в Steam ничего не ищется); сохранения по умолчанию —
 `<игра>/Savegames`:
@@ -97,7 +105,8 @@ python tools/fontbuild.py ru       # только по одной
 Оригинальные глифы переносятся из атласа без изменений; недостающие символы рендерятся из того же
 TTF с размером, подобранным по совпадению с латиницей. Хангыль — Malgun Gothic, иероглифы — Microsoft
 YaHei, кана — Yu Gothic. `fLarge` (Estrangelo Edessa, нет в Windows 11) — Century Gothic Bold.
-Атлас растёт сам. Превью — `fonts/_preview/`. Оригиналы в формате BMFont — `fonts_original/`
+Атлас растёт сам. Превью — `fonts/_preview/`. Оригинальные шрифты читаются прямо из архива игры.
+Свой TTF с тем же именем файла можно положить в `ttf/`. Оригиналы в формате BMFont — `fonts_original/`
 (`python tools/fontpack.py export`).
 
 ## Как устроена игра (найдено дизассемблированием, PDB лежит рядом с exe)
@@ -120,4 +129,4 @@ YaHei, кана — Yu Gothic. `fLarge` (Estrangelo Edessa, нет в Windows 11
 - `wad_orig/` — распакованный оригинальный wad (нужен только `fontbuild.py` и `fontpack.py export`)
 - `tools/` — `install.py`, `table.py`, `exestrings.py`, `gpcstrings.py`, `fontbuild.py`, `fontpack.py`,
   `wadtool.py`, `saves.py`, `forum.py`, `config.py`
-- `build.py` — установка из исходников, `patcher.py` + `make_release.py` — патчер для игроков
+- `build.py` — установка из исходников, `patcher.py` / `fontbuilder.py` + `make_release.py` — приложения для игроков

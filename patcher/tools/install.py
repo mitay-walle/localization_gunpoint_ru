@@ -68,6 +68,19 @@ def count(path, ref):
         return 0
 
 
+SKIP_DIRS = {'fonts', 'ttf', '_internal', 'build', 'dist', 'Scripts', 'Scripts.orig', 'Savegames'}
+
+
+def find_tables(base, ref):
+    found = []
+    for root, dirs, files in os.walk(base):
+        depth = os.path.relpath(root, base).count(os.sep) + (root != base)
+        dirs[:] = [] if depth >= 2 else [d for d in dirs if d not in SKIP_DIRS and not d.startswith('.')]
+        found += [os.path.join(root, f) for f in files if f.lower().endswith('.csv')]
+    counted = [(p, count(p, ref)) for p in sorted(found)]
+    return [(p, n) for p, n in counted if n]
+
+
 # --- originals -------------------------------------------------------------------------------
 
 def _game(name):
