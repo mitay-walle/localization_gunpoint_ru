@@ -50,6 +50,14 @@ def load_refs():
     return json.load(open(os.path.join(config.TRANSLATION, 'exe_refs.json'), encoding='utf-8'))
 
 
+def untranslatable():
+    """ids listed in translation/untranslatable.txt (first column) stay English: kind `tech`."""
+    p = os.path.join(config.TRANSLATION, 'untranslatable.txt')
+    if not os.path.exists(p):
+        return set()
+    return {l.split()[0] for l in open(p, encoding='utf-8') if l.strip() and not l.startswith('#')}
+
+
 def translations(lang):
     """-> ({gpc id: text}, {exe original: text}) for non-empty translations."""
     gpc, exe = {}, {}
@@ -78,6 +86,9 @@ def extract(lang, import_gpc=None):
     imported = gpcstrings.import_dir(config.SOURCE_GPC, import_gpc) if import_gpc else {}
 
     rows = gpc_rows + exe_rows
+    for r in rows:
+        if r['id'] in untranslatable():
+            r['kind'] = 'tech'
     for r in rows:
         t = by_id.get(r['id']) or (by_text.get(r['original'], '') if r['id'].startswith('exe:') else '')
         r['translation'] = t or imported.get(r['id'], '')
